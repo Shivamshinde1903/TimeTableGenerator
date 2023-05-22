@@ -1,23 +1,33 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../main.dart';
-
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  FirebaseFirestore.instance.settings = Settings(persistenceEnabled: true);
-  runApp(MyApp());
+void addData(Map<String, dynamic> data) {
+  FirebaseFirestore.instance
+      .collection("users")
+      .doc(data['uid'])
+      .set(data)
+      .then((value) => print("Data added successfully. Document ID  "))
+      .catchError((error) => print("Failed to add data: $error"));
 }
 
-void addData() {
-  FirebaseFirestore.instance.collection("users").add({
-    "first": "Ada",
-    "last": "Lovelace",
-    "born": 1815
-  })
-      .then((value) => print("Data added successfully. Document ID: ${value.id}"))
-      .catchError((error) => print("Failed to add data: $error"));
+void updateData(Map<String, dynamic> data, String docId) {
+  String uid = FirebaseAuth.instance.currentUser!.uid;
+
+  FirebaseFirestore.instance
+      .collection("users")
+      .where("uid", isEqualTo: uid)
+      .get()
+      .then((querySnapshot) {
+    for (var docSnapshot in querySnapshot.docs) {
+      FirebaseFirestore.instance
+          .collection("users")
+          .doc(docSnapshot.data()['uid'])
+          .update(data)
+          .then((value) => print("Data updated successfully."))
+          .catchError((error) => print("Failed to update data: $error"));
+    }
+  }).catchError((error) => print("Failed to update data: $error"));
 }
 
 // void createDatabaseAndAddData() {
@@ -40,22 +50,18 @@ void addData() {
 //     print('Failed to add document: $error');
 //   });
 // }
-Future<void> fetchDataByName(String firstName) async {
+Future<List> fetchData() async {
   try {
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('first', isEqualTo: firstName)
-        .get();
+    List professors = [];
+    QuerySnapshot querySnapshot =
+        await FirebaseFirestore.instance.collection('users').get();
 
     querySnapshot.docs.forEach((DocumentSnapshot document) {
-      print('First Name: ${document.data()['first']}');
-      print('Last Name: ${document.data()['last']}');
-      print('Born: ${document.data()['born']}');
-      print('-----');
+      professors.add(document.data());
     });
+    return professors;
   } catch (error) {
-    print('Failed to fetch data: $error');
+    print(error);
+    return [];
   }
 }
-
-

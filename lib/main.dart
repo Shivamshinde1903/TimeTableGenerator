@@ -1,4 +1,5 @@
 // core Flutter primitives
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:ui3/pages/auth_page.dart';
@@ -10,40 +11,23 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 // TODO: Add stream controller
 
 import 'package:rxdart/rxdart.dart';
+
 // used to pass messages from event handler to the UI
 final _messageStreamController = BehaviorSubject<RemoteMessage>();
 // TODO: Define the background message handler
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  FirebaseFirestore.instance.settings =
+      const Settings(persistenceEnabled: true);
   // TODO: Request permission
 
-  final messaging = FirebaseMessaging.instance;
-
-  final settings = await messaging.requestPermission(
-    alert: true,
-    announcement: false,
-    badge: true,
-    carPlay: false,
-    criticalAlert: false,
-    provisional: false,
-    sound: true,
-  );
-
-  if (kDebugMode) {
-    print('Permission granted: ${settings.authorizationStatus}');
-  }
   // TODO: Register with FCM
-  // It requests a registration token for sending messages to users from your App server or other trusted server environment.
-  String? token = await messaging.getToken();
 
-  if (kDebugMode) {
-    print('Registration Token=$token');
-  }
   // TODO: Set up foreground message handler
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -53,12 +37,9 @@ void main() async {
       print('Message notification: ${message.notification?.title}');
       print('Message notification: ${message.notification?.body}');
     }
-
     _messageStreamController.sink.add(message);
   });
-  // TODO: Set up background message handler
-  //createDatabaseAndAddData();
-  addData();
+
   runApp(const MyApp());
 }
 

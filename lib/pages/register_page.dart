@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:ui3/components/my_button.dart';
 import 'package:ui3/components/my_textfield.dart';
 import 'package:ui3/components/square_tile.dart';
+import 'package:ui3/pages/database.dart';
+import 'package:ui3/pages/home_page.dart';
 import 'package:ui3/services/auth_service.dart';
-
 import '../services/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -18,6 +19,7 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   // text editing controllers
   final emailController = TextEditingController();
+  final nameController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
 
@@ -37,16 +39,30 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       //check if password is confirmed
       if (passwordController.text == confirmPasswordController.text) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        UserCredential user =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailController.text,
           password: passwordController.text,
         );
+
+        addData({
+          "email": emailController.text,
+          "fullName": nameController.text,
+          "uid": user.user!.uid,
+          "password": passwordController.text,
+        });
       } else {
         //show error message, passwords don't match
         showErrorMessage("Passwords don't match!");
       }
       // pop the loading circle
-      Navigator.pop(context);
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+              builder: (context) => TimeTable(
+                    isHOD: false,
+                  )),
+          (route) => false);
     } on FirebaseAuthException catch (e) {
       // pop the loading circle
       Navigator.pop(context);
@@ -72,7 +88,6 @@ class _RegisterPageState extends State<RegisterPage> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +121,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 25),
 
                 // email textfield
+                MyTextField(
+                  controller: nameController,
+                  hintText: 'Name',
+                  obscureText: false,
+                ),
+                const SizedBox(height: 10),
+
                 MyTextField(
                   controller: emailController,
                   hintText: 'Email',
@@ -182,9 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     SizedBox(width: 25),
 
                     // apple button
-                    SquareTile(
-                        onTap: () {},
-                        imagePath: 'lib/images/apple.png')
+                    SquareTile(onTap: () {}, imagePath: 'lib/images/apple.png')
                   ],
                 ),
 

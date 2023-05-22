@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:ui3/components/my_button.dart';
 import 'package:ui3/components/my_textfield.dart';
 import 'package:ui3/components/square_tile.dart';
+import 'package:ui3/pages/home_page.dart';
 import 'package:ui3/services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
@@ -17,7 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   // text editing controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
+  bool isHOD = false;
   // sign user in method
   void signUserIn() async {
     // show loading circle
@@ -32,12 +33,29 @@ class _LoginPageState extends State<LoginPage> {
 
     // try sign in
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
-      );
-      // pop the loading circle
-      Navigator.pop(context);
+      FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: emailController.text,
+            password: passwordController.text,
+          )
+          .then((value) => {
+                if (emailController.text == "hod@vit.edu" &&
+                    passwordController.text == "hod@vitpune")
+                  {
+                    setState(() {
+                      isHOD = true;
+                    })
+                  },
+                // pop the loading circle
+                print(isHOD),
+                Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => TimeTable(
+                              isHOD: isHOD,
+                            )),
+                    (route) => false)
+              });
     } on FirebaseAuthException catch (e) {
       // pop the loading circle
       Navigator.pop(context);
@@ -116,18 +134,10 @@ class _LoginPageState extends State<LoginPage> {
                 const Icon(
                   Icons.lock,
                   size: 100,
+                  color: Colors.blue,
                 ),
 
                 const SizedBox(height: 50),
-
-                // welcome back, you've been missed!
-                Text(
-                  'Welcome back you\'ve been missed!',
-                  style: TextStyle(
-                    color: Colors.grey[700],
-                    fontSize: 16,
-                  ),
-                ),
 
                 const SizedBox(height: 25),
 
@@ -215,9 +225,7 @@ class _LoginPageState extends State<LoginPage> {
                     SizedBox(width: 25),
 
                     // apple button
-                    SquareTile(
-                        onTap: () {},
-                        imagePath: 'lib/images/apple.png')
+                    SquareTile(onTap: () {}, imagePath: 'lib/images/apple.png')
                   ],
                 ),
 

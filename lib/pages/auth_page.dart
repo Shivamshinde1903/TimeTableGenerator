@@ -15,7 +15,9 @@ class AuthPage extends StatelessWidget {
         builder: (context, snapshot) {
           // user is logged in
           if (snapshot.hasData) {
-            return TimeTable();
+            return TimeTable(
+              isHOD: snapshot.data?.email != null,
+            );
           }
 
           // user is NOT logged in

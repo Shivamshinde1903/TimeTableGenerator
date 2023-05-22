@@ -1,43 +1,16 @@
+import 'dart:isolate';
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-class HomePage extends StatelessWidget {
-  HomePage({super.key});
-
-  final user = FirebaseAuth.instance.currentUser!;
-
-  // sign user out method
-  void signUserOut() {
-    FirebaseAuth.instance.signOut();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[300],
-      appBar: AppBar(
-        backgroundColor: Colors.grey[900],
-        actions: [
-          IconButton(
-            onPressed: signUserOut,
-            icon: Icon(Icons.logout),
-          )
-        ],
-      ),
-      body: Center(
-          child: Text(
-        "LOGGED IN AS: " + user.email!,
-        style: TextStyle(fontSize: 20),
-      )),
-    );
-  }
-}
+import 'package:ui3/pages/database.dart';
 
 class TimeTable extends StatefulWidget {
-  final user = FirebaseAuth.instance.currentUser!;
+  TimeTable({super.key, required this.isHOD});
 
+  final user = FirebaseAuth.instance.currentUser!;
+  final bool isHOD;
   @override
   _TimeTableState createState() => _TimeTableState();
 }
@@ -60,8 +33,10 @@ class _TimeTableState extends State<TimeTable> {
     'Discrete Mathematics',
   ];
 
-  List<String> selectedSubjects = [];
+  List<String> selectedSubjects = List.empty(growable: true);
 
+  TextEditingController subjectController = TextEditingController();
+  List professors = [];
   void onSubjectSelected(bool value, String subject) {
     setState(() {
       if (value) {
@@ -73,14 +48,77 @@ class _TimeTableState extends State<TimeTable> {
   }
 
   @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    widget.isHOD
+        ? fetchData().then((teachers) => {
+              setState(() {
+                professors = teachers;
+              }),
+              for (int i = 0; i < teachers.length; i++)
+                {
+                  if (teachers[i]['selectedSubjects'] != null ||
+                      teachers[i]['selectedSubjects'] != [])
+                    {
+                      print(teachers[i]['selectedSubjects']),
+                      for (int j = 0;
+                          j < teachers[i]['selectedSubjects'].length;
+                          j++)
+                        {
+                          selectedSubjects
+                              .add(teachers[i]['selectedSubjects'][j]),
+                        }
+                    }
+                }
+            })
+        : null;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    print(widget.user);
+    print(widget.isHOD);
     return Scaffold(
+      bottomSheet: widget.isHOD
+          ? Container(
+              width: double.infinity,
+              child: TextButton(
+                child: const Text('Add Subjects'),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text(
+                          'Add Subjects',
+                        ),
+                        content: TextField(
+                          controller: subjectController,
+                        ),
+                        actions: [
+                          TextButton(
+                              onPressed: () {
+                                setState(() {
+                                  subjects.add(subjectController.text);
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Add Suject')),
+                          TextButton(
+                              onPressed: () {}, child: const Text('Cancel'))
+                        ],
+                      );
+                    },
+                  );
+                },
+              ))
+          : null,
       drawer: Drawer(
         child: ListView(
           children: <Widget>[
             DrawerHeader(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.blue,
                 ),
                 child: widget.user.photoURL != null
@@ -90,17 +128,17 @@ class _TimeTableState extends State<TimeTable> {
                             : null)
                     : Text(
                         "Welcome \n${widget.user.email}",
-                        style: TextStyle(fontSize: 18),
+                        style: const TextStyle(fontSize: 18),
                       )),
-            ListTile(
+            const ListTile(
               leading: Icon(Icons.home),
               title: Text('Home'),
             ),
-            ListTile(
+            const ListTile(
               leading: Icon(Icons.settings),
               title: Text('Settings'),
             ),
-            ListTile(
+            const ListTile(
               leading: Icon(Icons.info),
               title: Text('About'),
             ),
@@ -113,82 +151,161 @@ class _TimeTableState extends State<TimeTable> {
         actions: [
           IconButton(
             onPressed: signUserOut,
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
           )
         ],
       ),
-      body: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              'Choose subjects to teach:',
-              style: TextStyle(fontSize: 18),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                !widget.isHOD
+                    ? 'Select Subjects to teach (${selectedSubjects.length}/3)'
+                    : 'Professors Registered',
+                style: TextStyle(fontSize: 18),
+              ),
             ),
-          ),
-          ...subjects.map(
-            (subject) => CheckboxListTile(
-              title: Text(subject),
-              value: selectedSubjects.contains(subject),
-              onChanged: (value) => onSubjectSelected(value!, subject),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TimetableGenerationPage(
-                      selectedSubjects: selectedSubjects),
+            if (!widget.isHOD)
+              ...subjects.map(
+                (subject) => CheckboxListTile(
+                  title: Text(subject),
+                  value: selectedSubjects.contains(subject),
+                  onChanged: selectedSubjects.length < 3
+                      ? (value) => onSubjectSelected(value!, subject)
+                      : null,
                 ),
-              );
-            },
-            child: const Text('Generate Timetable'),
-          ),
-        ],
+              ),
+            if (widget.isHOD)
+              FutureBuilder(
+                future: fetchData(),
+                builder: (context, professors) {
+                  if (professors.hasData) {
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: professors.data?.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Text(professors.data?[index]['fullName']),
+                        );
+                      },
+                    );
+                  } else {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                },
+              ),
+            ElevatedButton(
+              onPressed: widget.isHOD
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TimetableGenerationPage(
+                              isHOD: true,
+                              selectedSubjects: selectedSubjects,
+                              professors: professors),
+                        ),
+                      );
+                    }
+                  : () {
+                      updateData({'selectedSubjects': selectedSubjects},
+                          widget.user.uid);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => TimetableGenerationPage(
+                                  isHOD: false,
+                                  professors: [],
+                                  selectedSubjects: selectedSubjects)));
+                    },
+              child:
+                  Text(widget.isHOD ? 'Generate Timetable' : 'Save Subjects'),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class TimetableGenerationPage extends StatelessWidget {
-  final List<String> selectedSubjects;
+class TimetableGenerationPage extends StatefulWidget {
+  const TimetableGenerationPage(
+      {super.key,
+      required this.selectedSubjects,
+      required this.isHOD,
+      required this.professors});
 
-  TimetableGenerationPage({required this.selectedSubjects});
+  final List<String> selectedSubjects;
+  final bool isHOD;
+  final List professors;
+
+  @override
+  State<TimetableGenerationPage> createState() =>
+      _TimetableGenerationPageState();
+}
+
+class _TimetableGenerationPageState extends State<TimetableGenerationPage> {
+  Map<String, dynamic> professorTimetables = {};
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    print(widget.isHOD);
+    print(widget.selectedSubjects);
+    print(widget.professors);
+    setState(() {
+      professorTimetables = widget.isHOD
+          ? generateTimetable(
+              selectedSubjects: widget.selectedSubjects,
+              days: 5,
+              timeSlots: 6,
+              classCount: 4,
+              professors: widget.professors)
+          : {};
+    });
+  }
+
+  //Get this data from firestore
+  bool isTimeTableGenerated = true;
+  Timetable table = Timetable(days: 5, timeSlots: 6);
+  String prof = '';
 
   @override
   Widget build(BuildContext context) {
-    final professorTimetables = generateTimetable(
-      selectedSubjects: selectedSubjects,
-      days: 5,
-      timeSlots: 6,
-      professorCount: 10,
-      classCount: 12,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Generated Timetables'),
       ),
-      body: ListView.builder(
-        itemCount: professorTimetables.length,
-        itemBuilder: (context, index) {
-          final professor = professorTimetables.keys.elementAt(index);
-          final timetable = professorTimetables[professor]!;
-          return ListTile(
-            title: Text(professor),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TimetableScreen(
-                      professor: professor, timetable: timetable),
+      body: widget.isHOD
+          ? ListView.builder(
+              itemCount: professorTimetables.length,
+              itemBuilder: (context, index) {
+                final professor = professorTimetables.keys.elementAt(index);
+                final timetable = professorTimetables[professor]!;
+                return ListTile(
+                  title: Text(professor),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TimetableScreen(
+                            professor: professor, timetable: timetable),
+                      ),
+                    );
+                  },
+                );
+              },
+            )
+          : isTimeTableGenerated
+              ? TimetableScreen(professor: prof, timetable: table)
+              : Center(
+                  child: Text(
+                      'Please wait while the time table is generated by HOD'),
                 ),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 }
@@ -197,7 +314,8 @@ class TimetableScreen extends StatelessWidget {
   final String professor;
   final Timetable timetable;
 
-  TimetableScreen({required this.professor, required this.timetable});
+  TimetableScreen(
+      {super.key, required this.professor, required this.timetable});
 
   List timeSlots = [
     '10:00am - 11:00am',
@@ -231,8 +349,10 @@ class TimetableScreen extends StatelessWidget {
                       title: Text(' ${timeSlots[timeSlotIndex]} '),
                       subtitle: Text(
                           'Room No. ${timetable.getEntry(dayIndex, timeSlotIndex)?.classNumber ?? '-'}'),
-                      trailing: Text(
-                          '${timetable.getEntry(dayIndex, timeSlotIndex)?.subject ?? 'Free'}'),
+                      trailing: Text(timetable
+                              .getEntry(dayIndex, timeSlotIndex)
+                              ?.subject ??
+                          'Free'),
                     )
                 ],
               ),
@@ -262,37 +382,66 @@ class Timetable {
   }
 }
 
-Map<String, Timetable> generateTimetable({
-  required List<String> selectedSubjects,
-  required int days,
-  required int timeSlots,
-  required int professorCount,
-  required int classCount,
-}) {
+Map<String, Timetable> generateTimetable(
+    {required List<String> selectedSubjects,
+    required int days,
+    required int timeSlots,
+    required int classCount,
+    required List professors}) {
   Map<String, Timetable> professorTimetables = {};
-  for (int i = 1; i <= professorCount; i++) {
-    professorTimetables['Professor $i'] =
+
+  print(professors.length);
+  for (int i = 0; i <= professors.length - 1; i++) {
+    print(i);
+    professorTimetables[professors[i]['fullName']] =
         Timetable(days: days, timeSlots: timeSlots);
   }
 
   Random random = Random();
-  for (int classIndex = 1; classIndex <= classCount; classIndex++) {
-    for (int dayIndex = 0; dayIndex < days; dayIndex++) {
-      for (int timeSlotIndex = 0; timeSlotIndex < timeSlots; timeSlotIndex++) {
-        String subject =
-            selectedSubjects[random.nextInt(selectedSubjects.length)];
-        String professor = 'Professor ${random.nextInt(professorCount) + 1}';
-
-        professorTimetables[professor]!.setEntry(
-            dayIndex,
-            timeSlotIndex,
-            TimetableEntry(
-                professor: professor,
-                subject: subject,
-                classNumber: classIndex));
+  for (int professor = 1; professor < professors.length; professor++) {
+    for (int classIndex = 1; classIndex <= classCount; classIndex++) {
+      for (int dayIndex = 1; dayIndex < days; dayIndex++) {
+        for (int timeSlotIndex = 0;
+            timeSlotIndex < timeSlots;
+            timeSlotIndex++) {
+          String subject = professors[professor]['selectedSubjects'][
+              random.nextInt(professors[professor]['selectedSubjects'].length)];
+          professorTimetables[professors[professor]['fullName']]!.setEntry(
+              dayIndex,
+              timeSlotIndex,
+              TimetableEntry(
+                  professor: professors[professor]['fullName'],
+                  subject: subject,
+                  classNumber: classIndex));
+        }
       }
     }
   }
+
+  /*
+    List professorTimetable = [
+      {
+        name:
+        fcmToken:
+        subjects: [a,b,c]
+        timetable: {}
+      }
+    ]
+*/
+
+  //Save these time tables into the professor model
+
+  // Update this into user moel synchrounously
+  for (int i = 0; i <= professors.length - 1; i++) {
+    Future.delayed(
+        const Duration(seconds: 1),
+        () => updateData(
+            {'timetabe': professorTimetables[professors[i]['fullName']]},
+            professors[i]['uid']));
+  }
+
+  updateData({'timetabe': professorTimetables[professors[0]['fullName']]},
+      professors[0]['uid']);
 
   return professorTimetables;
 }

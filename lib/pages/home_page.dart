@@ -74,7 +74,39 @@ class _TimeTableState extends State<TimeTable> {
 
   @override
   Widget build(BuildContext context) {
+    print(widget.user);
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          children: <Widget>[
+            DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                ),
+                child: widget.user.photoURL != null
+                    ? CircleAvatar(
+                        backgroundImage: widget.user.photoURL != null
+                            ? NetworkImage(widget.user.photoURL!)
+                            : null)
+                    : Text(
+                        "Welcome \n${widget.user.email}",
+                        style: TextStyle(fontSize: 18),
+                      )),
+            ListTile(
+              leading: Icon(Icons.home),
+              title: Text('Home'),
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('Settings'),
+            ),
+            ListTile(
+              leading: Icon(Icons.info),
+              title: Text('About'),
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: const Text('Timetable Generation App'),
         elevation: 1,

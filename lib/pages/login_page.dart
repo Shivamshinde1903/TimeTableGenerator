@@ -47,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
                     })
                   },
                 // pop the loading circle
-                print(isHOD),
+
                 Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
@@ -55,12 +55,15 @@ class _LoginPageState extends State<LoginPage> {
                               isHOD: isHOD,
                             )),
                     (route) => false)
-              });
+              })
+          .catchError((e) {
+        showErrorMessage(e.code);
+      });
     } on FirebaseAuthException catch (e) {
       // pop the loading circle
       Navigator.pop(context);
+      print("Error:$e");
       // show error message
-      showErrorMessage(e.code);
     }
   }
 

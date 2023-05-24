@@ -16,7 +16,7 @@ class AuthPage extends StatelessWidget {
           // user is logged in
           if (snapshot.hasData) {
             return TimeTable(
-              isHOD: snapshot.data?.email != null,
+              isHOD: snapshot.data?.email == "hod@vit.edu",
             );
           }
 

@@ -51,27 +51,23 @@ class _RegisterPageState extends State<RegisterPage> {
           "uid": user.user!.uid,
           "password": passwordController.text,
         });
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+                builder: (context) => TimeTable(
+                      isHOD: false,
+                    )),
+            (route) => false);
       } else {
-        //show error message, passwords don't match
+        Navigator.pop(context);
         showErrorMessage("Passwords don't match!");
       }
-      // pop the loading circle
-      Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-              builder: (context) => TimeTable(
-                    isHOD: false,
-                  )),
-          (route) => false);
     } on FirebaseAuthException catch (e) {
-      // pop the loading circle
       Navigator.pop(context);
-      // show error message
       showErrorMessage(e.code);
     }
   }
 
-  // wrong email message popup
   void showErrorMessage(String message) {
     showDialog(
       context: context,
@@ -198,7 +194,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   children: [
                     // google button
                     SquareTile(
-                        onTap: () => AuthService().signInWithGoogle(),
+                        onTap: () => {AuthService().signInWithGoogle()},
                         imagePath: 'lib/images/google.png'),
 
                     SizedBox(width: 25),

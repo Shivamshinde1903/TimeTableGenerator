@@ -11,14 +11,41 @@ void addData(Map<String, dynamic> data) {
       .catchError((error) => print("Failed to add data: $error"));
 }
 
-void updateData(Map<String, dynamic> data, String docId) {
-  String uid = FirebaseAuth.instance.currentUser!.uid;
+Future updateData(Map<String, dynamic> data, String docId,
+    {bool isFiles = false}) async {
+  String? uid = isFiles ? FirebaseAuth.instance.currentUser!.uid : null;
+  !isFiles
+      ? FirebaseFirestore.instance
+          .collection("users")
+          .where("uid", isEqualTo: uid)
+          .get()
+          .then((querySnapshot) {
+          for (var docSnapshot in querySnapshot.docs) {
+            FirebaseFirestore.instance
+                .collection("users")
+                .doc(docSnapshot.data()['uid'])
+                .update(data)
+                .then((value) => print("Data updated successfully."))
+                .catchError((error) => print("Failed to update data: $error"));
+          }
+        }).catchError((error) => print("Failed to update data: $error"))
+      : FirebaseFirestore.instance
+          .collection("users")
+          .get()
+          .then((querySnapshot) {
+          for (var docSnapshot in querySnapshot.docs) {
+            FirebaseFirestore.instance
+                .collection("users")
+                .doc(docSnapshot.data()['uid'])
+                .update(data)
+                .then((value) => print("Data updated successfully."))
+                .catchError((error) => print("Failed to update data: $error"));
+          }
+        }).catchError((error) => print("Failed to update data: $error"));
+}
 
-  FirebaseFirestore.instance
-      .collection("users")
-      .where("uid", isEqualTo: uid)
-      .get()
-      .then((querySnapshot) {
+void updateTimetable(Map<String, dynamic> data) {
+  FirebaseFirestore.instance.collection("users").get().then((querySnapshot) {
     for (var docSnapshot in querySnapshot.docs) {
       FirebaseFirestore.instance
           .collection("users")

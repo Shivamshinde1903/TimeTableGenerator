@@ -13,16 +13,12 @@ class AuthPage extends StatelessWidget {
       body: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // user is logged in
           if (snapshot.hasData) {
             return TimeTable(
               isHOD: snapshot.data?.email == "hod@vit.edu",
             );
-          }
-
-          // user is NOT logged in
-          else {
-            return LoginOrRegisterPage();
+          } else {
+            return const LoginOrRegisterPage();
           }
         },
       ),

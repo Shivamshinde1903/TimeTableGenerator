@@ -62,7 +62,7 @@ class _LoginPageState extends State<LoginPage> {
     } on FirebaseAuthException catch (e) {
       // pop the loading circle
       Navigator.pop(context);
-      print("Error:$e");
+
       // show error message
     }
   }
@@ -77,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
           title: Center(
             child: Text(
               message,
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         );
@@ -90,11 +90,11 @@ class _LoginPageState extends State<LoginPage> {
     showDialog(
       context: context,
       builder: (context) {
-        return const AlertDialog(
-          backgroundColor: Colors.deepPurple,
-          title: Center(
+        return AlertDialog(
+          backgroundColor: Colors.purple.shade100,
+          title: const Center(
             child: Text(
-              'Badly Formatted Email',
+              'Please enter a correct Email address',
               style: TextStyle(color: Colors.white),
             ),
           ),
@@ -225,7 +225,7 @@ class _LoginPageState extends State<LoginPage> {
                         onTap: () => AuthService().signInWithGoogle(),
                         imagePath: 'lib/images/google.png'),
 
-                    SizedBox(width: 25),
+                    const SizedBox(width: 25),
 
                     // apple button
                     SquareTile(onTap: () {}, imagePath: 'lib/images/apple.png')

@@ -3,7 +3,7 @@ import 'package:ui3/pages/model/timetable.dart';
 
 class TimetableScreen extends StatelessWidget {
   final String professor;
-  final Timetable timetable;
+  final dynamic timetable;
   final bool isHOD;
 
   TimetableScreen(
@@ -23,12 +23,13 @@ class TimetableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print(timetable);
     return Scaffold(
       appBar: isHOD
           ? AppBar(
               title: Text('Timetable for $professor'),
             )
-          : AppBar(),
+          : null,
       body: Padding(
         padding: const EdgeInsets.all(4.0),
         child: ListView.builder(

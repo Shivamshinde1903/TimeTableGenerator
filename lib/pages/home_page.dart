@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ui3/pages/database.dart';
@@ -37,6 +38,7 @@ class _TimeTableState extends State<TimeTable> {
 
   TextEditingController subjectController = TextEditingController();
   List professors = [];
+
   void onSubjectSelected(bool value, String subject) {
     setState(() {
       if (value) {
@@ -51,95 +53,128 @@ class _TimeTableState extends State<TimeTable> {
   void initState() {
     super.initState();
 
-    // widget.isHOD
-    //     ?
-    fetchData().then((teachers) => {
-          setState(() {
-            professors = teachers;
-          }),
-          for (int i = 0; i < teachers.length; i++)
-            {
-              if (teachers[i]['selectedSubjects'] != null ||
-                  teachers[i]['selectedSubjects'] != [])
+    widget.isHOD
+        ? fetchData().then((teachers) => {
+              setState(() {
+                professors = teachers;
+              }),
+              for (int i = 0; i < teachers.length; i++)
                 {
-                  for (int j = 0;
-                      j < teachers[i]['selectedSubjects'].length;
-                      j++)
+                  if (teachers[i]['selectedSubjects'] != null ||
+                      teachers[i]['selectedSubjects'] != [])
                     {
-                      selectedSubjects.add(teachers[i]['selectedSubjects'][j]),
+                      for (int j = 0;
+                          j < teachers[i]['selectedSubjects'].length;
+                          j++)
+                        {
+                          selectedSubjects
+                              .add(teachers[i]['selectedSubjects'][j]),
+                        }
                     }
                 }
-            }
+            })
+        : null;
+
+    if (!widget.isHOD) {
+      print("wedrwefwef");
+      var doc =
+          FirebaseFirestore.instance.collection("users").doc(widget.user.uid);
+      doc.get().then((value) {
+        print(value.data()!['selectedSubjects']);
+        setState(() {
+          selectedSubjects = value.data()!['selectedSubjects'].cast<String>();
         });
-    // : null;
+      });
+    }
+    ;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomSheet: !widget.isHOD
-          ? Container(
-              width: double.infinity,
-              child: TextButton(
-                child: const Text('Add Subjects'),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text(
-                          'Add Subjects',
-                        ),
-                        content: TextField(
-                          controller: subjectController,
-                        ),
-                        actions: [
-                          TextButton(
-                              onPressed: () {
-                                setState(() {
-                                  subjects.add(subjectController.text);
-                                });
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Add Suject')),
-                          TextButton(
-                              onPressed: () {}, child: const Text('Cancel'))
-                        ],
-                      );
-                    },
-                  );
-                },
-              ))
+      floatingActionButton: !widget.isHOD
+          ? FloatingActionButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text(
+                        'Add Subjects',
+                      ),
+                      content: TextField(
+                        controller: subjectController,
+                      ),
+                      actions: [
+                        TextButton(
+                            onPressed: () {
+                              setState(() {
+                                subjects.add(subjectController.text);
+                              });
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Add Suject')),
+                        TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Cancel'))
+                      ],
+                    );
+                  },
+                );
+              },
+              child: const Icon(Icons.add),
+            )
           : null,
-      drawer: Drawer(
-        child: ListView(
-          children: <Widget>[
-            DrawerHeader(
-                decoration: const BoxDecoration(
-                  color: Colors.blue,
-                ),
-                child: widget.user.photoURL != null
-                    ? CircleAvatar(
-                        backgroundImage: widget.user.photoURL != null
-                            ? NetworkImage(widget.user.photoURL!)
-                            : null)
-                    : Text(
-                        "Welcome \n${widget.user.email}",
-                        style: const TextStyle(fontSize: 18),
-                      )),
-            const ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-            ),
-            const ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
-            ),
-            const ListTile(
-              leading: Icon(Icons.info),
-              title: Text('About'),
-            ),
-          ],
+      bottomSheet: ElevatedButton(
+        style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.all(Colors.blue.shade300),
+            foregroundColor: MaterialStateProperty.all(Colors.white),
+            minimumSize: MaterialStateProperty.all(Size(double.maxFinite, 50)),
+            shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            )))),
+        onPressed: widget.isHOD
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TimetableGenerationPage(
+                        isHOD: true,
+                        selectedSubjects: [...selectedSubjects, "Free"],
+                        professors: professors),
+                  ),
+                );
+              }
+            : () {
+                var doc = FirebaseFirestore.instance
+                    .collection("users")
+                    .doc(widget.user.uid);
+                doc.update({
+                  'selectedSubjects': [...selectedSubjects]
+                });
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => TimetableGenerationPage(
+                            isHOD: false,
+                            professors: professors,
+                            selectedSubjects: [...selectedSubjects, "Free"])));
+              },
+        child: Text(
+          widget.isHOD
+              ? 'Generate Timetable'
+              : selectedSubjects.isNotEmpty
+                  ? 'View Timetable'
+                  : 'Save Subjects',
+          style: Theme.of(context)
+              .textTheme
+              .bodyLarge!
+              .copyWith(fontSize: 18, color: Colors.white),
         ),
       ),
       appBar: AppBar(
@@ -156,12 +191,12 @@ class _TimeTableState extends State<TimeTable> {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8.0),
               child: Text(
                 !widget.isHOD
                     ? 'Select Subjects to teach (${selectedSubjects.length}/3)'
                     : 'Professors Registered',
-                style: TextStyle(fontSize: 18),
+                style: const TextStyle(fontSize: 18),
               ),
             ),
             if (!widget.isHOD)
@@ -183,8 +218,26 @@ class _TimeTableState extends State<TimeTable> {
                       shrinkWrap: true,
                       itemCount: professors.data?.length,
                       itemBuilder: (context, index) {
+                        List<String> selectedSubjects = professors.data?[index]
+                                ['selectedSubjects']
+                            .cast<String>();
                         return ListTile(
                           title: Text(professors.data?[index]['fullName']),
+                          trailing: DropdownButton<String>(
+                            underline: const SizedBox(),
+                            isExpanded: false,
+                            items: selectedSubjects
+                                .sublist(0, 3)
+                                .map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                enabled: false,
+                                child:
+                                    Container(width: 150, child: Text(value)),
+                              );
+                            }).toList(),
+                            onChanged: (_) {},
+                          ),
                         );
                       },
                     );
@@ -195,34 +248,6 @@ class _TimeTableState extends State<TimeTable> {
                   }
                 },
               ),
-            ElevatedButton(
-              onPressed: widget.isHOD
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TimetableGenerationPage(
-                              isHOD: true,
-                              selectedSubjects: selectedSubjects,
-                              professors: professors),
-                        ),
-                      );
-                    }
-                  : () {
-                      updateData({
-                        'selectedSubjects': [...selectedSubjects, "Free"]
-                      }, widget.user.uid);
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => TimetableGenerationPage(
-                                  isHOD: true,
-                                  professors: professors,
-                                  selectedSubjects: selectedSubjects)));
-                    },
-              child:
-                  Text(widget.isHOD ? 'Generate Timetable' : 'Save Subjects'),
-            ),
           ],
         ),
       ),

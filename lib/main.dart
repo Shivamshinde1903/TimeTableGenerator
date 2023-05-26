@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ui3/pages/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,10 +20,25 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  FirebaseFirestore.instance.settings =
-      const Settings(persistenceEnabled: true);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    var notification = message.notification;
+    FlutterLocalNotificationsPlugin().show(
+        notification.hashCode,
+        notification?.title,
+        notification?.body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'push_notification',
+            icon: '@mipmap/ic_launcher',
+            notification!.title!,
+            colorized: true,
+            color: Colors.blue,
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]),
+          ),
+        ));
     if (kDebugMode) {
       print('Handling a foreground message: ${message.messageId}');
       print('Message data: ${message.data}');

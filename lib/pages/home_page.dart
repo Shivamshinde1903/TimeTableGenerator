@@ -1,10 +1,12 @@
-import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:ui3/pages/database.dart';
+import 'dart:io';
 
+import 'package:pdf/widgets.dart' as pw;
 import 'timetable_generation.dart';
 
 class TimeTable extends StatefulWidget {
@@ -19,6 +21,7 @@ class TimeTable extends StatefulWidget {
 class _TimeTableState extends State<TimeTable> {
   void signUserOut() {
     FirebaseAuth.instance.signOut();
+    Navigator.pop(context);
   }
 
   List<String> subjects = [
@@ -76,17 +79,38 @@ class _TimeTableState extends State<TimeTable> {
         : null;
 
     if (!widget.isHOD) {
-      print("wedrwefwef");
       var doc =
           FirebaseFirestore.instance.collection("users").doc(widget.user.uid);
       doc.get().then((value) {
         print(value.data()!['selectedSubjects']);
         setState(() {
-          selectedSubjects = value.data()!['selectedSubjects'].cast<String>();
+          selectedSubjects = value.data()!['selectedSubjects'] != null
+              ? value.data()!['selectedSubjects'].cast<String>()
+              : [];
         });
       });
     }
-    ;
+    exportAsPDF();
+  }
+
+  Future exportAsPDF() async {
+    final pdf = pw.Document();
+    Directory appDocDirectory = await getApplicationDocumentsDirectory();
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) => pw.Center(
+          child: pw.Text('Hello World!'),
+        ),
+      ),
+    );
+
+    final file =
+        await File(appDocDirectory.path + '/' + 'welcome.pdf').create();
+    file.writeAsBytes(await pdf.save()).then((value) => {
+          print('Saved as PDF + $value'),
+          Share.shareFiles([appDocDirectory.path + '/' + 'welcome.pdf'],
+              text: 'Great picture')
+        });
   }
 
   @override
@@ -155,7 +179,9 @@ class _TimeTableState extends State<TimeTable> {
                     .collection("users")
                     .doc(widget.user.uid);
                 doc.update({
-                  'selectedSubjects': [...selectedSubjects]
+                  'selectedSubjects': selectedSubjects.contains("Free")
+                      ? selectedSubjects
+                      : [...selectedSubjects, "Free"]
                 });
                 Navigator.push(
                     context,
@@ -194,7 +220,7 @@ class _TimeTableState extends State<TimeTable> {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 !widget.isHOD
-                    ? 'Select Subjects to teach (${selectedSubjects.length}/3)'
+                    ? 'Select Subjects to teach (${selectedSubjects.length == 4 ? 3 : selectedSubjects.length}/3)'
                     : 'Professors Registered',
                 style: const TextStyle(fontSize: 18),
               ),

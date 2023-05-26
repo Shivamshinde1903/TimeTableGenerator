@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:ui3/components/my_button.dart';
 import 'package:ui3/components/my_textfield.dart';
@@ -44,12 +45,14 @@ class _RegisterPageState extends State<RegisterPage> {
           email: emailController.text,
           password: passwordController.text,
         );
+        String? fcmToken = await FirebaseMessaging.instance.getToken();
 
         addData({
           "email": emailController.text,
           "fullName": nameController.text,
           "uid": user.user!.uid,
           "password": passwordController.text,
+          "fcm_token": fcmToken
         });
         Navigator.pushAndRemoveUntil(
             context,
